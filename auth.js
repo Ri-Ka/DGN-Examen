@@ -9,6 +9,9 @@ const msalConfig = {
 
 const msalInstance = new msal.PublicClientApplication(msalConfig);
 
+// Seite ausblenden, bis der Login erfolgreich ist
+document.documentElement.style.display = "none";
+
 // Login-Funktion mit MSAL
 function login() {
     const loginRequest = {
@@ -18,14 +21,16 @@ function login() {
     msalInstance.loginPopup(loginRequest)
         .then(response => {
             console.log("Erfolgreich angemeldet:", response);
-            // Wenn erfolgreich, zeigt den Inhalt an, indem z. B. das `display` von `#content` geändert wird
-            document.getElementById("content").style.display = "block";
+            // Seite anzeigen, wenn der Login erfolgreich ist
+            document.documentElement.style.display = "block";
         })
         .catch(error => {
             console.error("Anmeldefehler:", error);
             alert("Zugriff nur für autorisierte Benutzer.");
+            // Weiterleitung auf eine andere Seite oder ausloggen
+            window.location.href = "https://login.microsoftonline.com";
         });
 }
 
-// Beim Laden der Seite den Login auslösen
+// Führe die Login-Funktion bei Seitenaufruf aus
 window.onload = login;
