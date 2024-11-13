@@ -6,39 +6,7 @@
     <link rel="stylesheet" type="text/css" href="./assets/css/bundled.css">
     <script src="./assets/js/bundled.js"></script>
     <script src="https://alcdn.msauth.net/browser/2.19.0/js/msal-browser.min.js"></script>
-    <script type="text/javascript">
-        // MSAL-Konfiguration
-        const msalConfig = {
-            auth: {
-                clientId: "2e358634-c519-4968-9b1e-c1168873766f", // Ersetze mit deiner Application ID
-                authority: "https://login.microsoftonline.com/cd5c6082-4849-4c49-a171-0044e130d518", // Ersetze mit deiner Tenant ID
-                redirectUri: "https://Ri-Ka.github.io/DGN-Examen" // Deine GitHub Pages URL
-            }
-        };
-
-        const msalInstance = new msal.PublicClientApplication(msalConfig);
-
-        // Login-Funktion mit MSAL
-        function login() {
-            const loginRequest = {
-                scopes: ["User.Read"]
-            };
-
-            msalInstance.loginPopup(loginRequest)
-                .then(response => {
-                    console.log("Erfolgreich angemeldet:", response);
-                    document.getElementById("content").style.display = "block"; // Zeigt den geschützten Inhalt an
-                })
-                .catch(error => {
-                    console.error("Anmeldefehler:", error);
-                    alert("Zugriff nur für autorisierte Benutzer.");
-                });
-        }
-
-        // Rufe Login bei Seitenaufruf auf
-        window.onload = login;
-    </script>
-
+    <script src="./auth.js"></script> <!-- Authentifizierungs-Skript einbinden -->
     <script type="text/javascript">var subtitles = {
 			T_21053: {
                 lang: "en",
@@ -51,140 +19,358 @@
         	}
 		};
 
-        function UndefinedToZero(value) {
-            if(typeof value === "undefined") {
-                return 0;
+            function UndefinedToZero(value) {
+                if(typeof value === "undefined") {
+                    return 0;
+                }
+                return value;
             }
-            return value;
-        }
 
-        function _Time(frames, seconds, minutes, hours) {
-            frames = UndefinedToZero(frames) / 24;
-            seconds = UndefinedToZero(seconds);
-            minutes = UndefinedToZero(minutes) * 60;
-            hours = UndefinedToZero(hours) * 3600;
-            return hours + minutes + seconds + frames;
-        }
+            function _Time(frames, seconds, minutes, hours) {
+                frames = UndefinedToZero(frames) / 24;
+                seconds = UndefinedToZero(seconds);
+                minutes = UndefinedToZero(minutes) * 60;
+                hours = UndefinedToZero(hours) * 3600;
+                return hours + minutes + seconds + frames;
+            }
 
-        function TTime(value) {
-            if(typeof value === "undefined") {
-                value = "00:00:00:00";
+            function TTime(value) {
+                if(typeof value === "undefined") {
+                    value = "00:00:00:00";
+                }
+                var split = value.split(":");
+                var frames = (split[3]*1)/24;
+                var seconds = split[2]*1;
+                var minutes = (split[1]*1)*60;
+                var hours = (split[0]*1)*3600;
+                var output = hours + minutes + seconds + frames;
+                return output;
             }
-            var split = value.split(":");
-            var frames = (split[3]*1)/24;
-            var seconds = split[2]*1;
-            var minutes = (split[1]*1)*60;
-            var hours = (split[0]*1)*3600;
-            var output = hours + minutes + seconds + frames;
-            return output;
-        }
 
-        function T(start, end, text, direction) {
-            if(typeof direction === "undefined") {
-                direction = "ltr";
-            }
-            return {
-                start: start,
-                end: end,
-                text: text,
-                direction: direction
-            }
-        }</script>
+            function T(start, end, text, direction) {
+                if(typeof direction === "undefined") {
+                    direction = "ltr";
+                }
+                return {
+                    start: start,
+                    end: end,
+                    text: text,
+                    direction: direction
+                }
+            }</script>
 
 </head>
-<body>
-    <style>
-        a:hover {
-            cursor: pointer;
-        } 
-
-        .content-editable {
-            position: relative; 
-        }
-
-        .draggable-reading-field {
-            display: inline-block; 
-            position: absolute; 
-            z-index: 9; 
-            border: 1px solid gray;
-            padding: 2px;
-        }
-
-        .draggable-reading-field-invisible {
-            opacity: 0 !important;
-            border-style: none;
-        }
-
-        .line-numbers-container {
-            resize: none !important;
-            border: none !important;
-            padding: 0 !important;
-            counter-reset: line;
-        }
-
-        .line-numbers-container p.numbered-line {
-            margin-block-start: 0;
-            margin-block-end: 0;
-        }
-
-        .line-numbers-container .numbered-line:before {
-            content: counter(line);
-            counter-increment: line;
-            color: #888;
-            visibility: hidden;
-            display: inline-block;
-            width: auto;
-            min-width: 18px;
-            padding-left: 8px;
-            padding-right: 10px;
-            text-align: right;
-            font-weight: 100;
-            font-size: 1rem;
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        }
-
-        .line-numbers-container .numbered-line:first-child:before, 
-        .line-numbers-container .numbered-line:nth-child(5n of .numbered-line):before {
-            visibility: visible;
+	<body>
+ <style>
+        /* Inhalt wird standardmäßig ausgeblendet, bis Anmeldung erfolgreich */
+        #content {
+            display: none;
         }
     </style>
-    <!-- Geschützter Inhalt -->
-    <div id="content" style="display: none;">
+    <div id="content">
+        <style>
+            a:hover {
+                cursor: pointer;
+            } 
+
+            .content-editable {
+                position: relative; 
+            }
+
+            .draggable-reading-field {
+                display: inline-block; 
+                position: absolute; 
+                z-index: 9; 
+                border: 1px solid gray;
+                padding: 2px;
+            }
+
+            .draggable-reading-field-invisible {
+                opacity: 0 !important;
+                border-style: none;
+            }
+
+            .line-numbers-container {
+                resize: none !important;
+                border: none !important;
+                padding: 0 !important;
+                counter-reset: line;
+            }
+
+            .line-numbers-container p.numbered-line {
+                margin-block-start: 0;
+                margin-block-end: 0;
+            }
+
+            .line-numbers-container .numbered-line:before {
+                content: counter(line);
+                counter-increment: line;
+                color: #888;
+                visibility: hidden;
+                display: inline-block;
+                width: auto;
+                min-width: 18px;
+                padding-left: 8px;
+                padding-right: 10px;
+                text-align: right;
+                font-weight: 100;
+                font-size: 1rem;
+                font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            }
+
+            .line-numbers-container .numbered-line:first-child:before, 
+            .line-numbers-container .numbered-line:nth-child(5n of .numbered-line):before {
+                visibility: visible;
+            }
+        </style>
         <div class="skabelon">
-            <!-- Rest deines HTML-Codes... -->
             <header class="skabelon-header">
                 <div class="skabelon-header-institution_logo" style="position:relative">
                     <p style="position: absolute; color: transparent;">Højere forberedelseseksamen</p>
                 </div>
                 <img alt="" class="skabelon-header-stuk_logo" id="uvm_logo" src="assets/images/uvm_logo_stuk.png">
             </header>
-            <!-- Hier kannst du den restlichen Inhalt wie im Original belassen -->
+            <div class="skabelon-wrapper">
+                <div class="skabelon-wrapper-menu" id="skabelon-wrapper-menu">
+                    <ul>
+						<ul>
+                          <li><a href="javascript:void(0)" class="web-document-link active parent-document" id="web-document-link-6746" data-document-id="6746" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Forside</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8468" data-document-id="8468" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Prøvegenrer</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8469" data-document-id="8469" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Henvisningspraksis</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8470" data-document-id="8470" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Opgave 1</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8471" data-document-id="8471" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Opgave 2</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8472" data-document-id="8472" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Opgave 3</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-8473" data-document-id="8473" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Info til Copydan</a></li>
+                          <li><a href="javascript:void(0)" class="web-document-link parent-document" id="web-document-link-9061" data-document-id="9061" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Printversion</a></li>
+                          <li><a href="javascript:void(0)" style="font-size:14px;" class="web-document-link parent-document" id="web-document-link-8808" data-document-id="8808" onclick="changeDocument(this);VideoPlayer.InitPlayers('.web-document-active .new-player');VideoPlayer.PauseAll();">Prøvesættet er underlagt ophavsret</a></li>
+                        </ul>
+					</ul>
+                    <a id="proeveforekomst">hfe242-DSA/A-14082024</a>
+                </div>
+                <div class="skabelon-wrapper-content">
+                    <div class="content-editable" id="content-editable"><style>.web-document { display: none; } .web-document-active { display: block; }</style>
+						<div class="web-document" id="web-document-8808">
+							<div class="ophavsret" style="border: solid black 1px; padding: 25px 25px 10px; font-style: italic; line-height: 1.4;" data-mce-style="border: solid black 1px; padding: 25px 25px 10px; font-style: italic; line-height: 1.4;">
+								<h2 style="font-size: 17px; margin: 0;" data-mce-style="font-size: 17px; margin: 0;">Dette prøvesæt er omfattet af ophavsretten, jf. ophavsretslovens § 1.</h2>
+								<p>Prøvesættet må alene anvendes til den på prøvesættet anførte prøve. <br><br>Al anden anvendelse af prøvesættet, herunder visning eller deling f.eks. via internettet, sociale medier, portaler og bøger, udgør en krænkelse af Børne- og Undervisningsministeriets og evt. tredjemands ophavsret og er ikke tilladt.<br><br>Overtrædelse af ophavsretten kan være erstatningspådragende og/eller strafbart.<br><br>Prøvesættet kan dog, efter at prøven er afsluttet, anvendes til undervisningsbrug på uddannelser m.v. omfattet af den lovgivning, som Styrelsen for Undervisning og Kvalitet administrerer.</p>
+							</div>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-9061">
+							<h2>Printversion</h2>
+							<p>Download printversion <a pbyg-data-href-id="22655" href="assets/hfe242_DSA_A_14082024_21944-22655.pdf" target="_blank" rel="noopener" data-mce-href="https://xn--prvebyggeren-wjb.dk/webdav/OoHEiMgk4oa7xZ-LJv0rPQ/document/hfe242_DSA_A_14082024_21944.pdf">her.</a></p>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8473">
+							<h2>Oplysninger til Copydan</h2>
+							<p>Tekst 1: Robert Olen Butler: "Fårekyllinger". I: <em>Velduft fra et fremmed bjerg</em>, Klim, 1996 (oprindeligt udgivet på engelsk i 1992)</p>
+							<p>Tekst 2a: Andel: <em>Det er på tide at ændre billedet af dansk idyl</em>, YouTube, 2023, https://youtu.be/TgK0p4JCjvk</p>
+							<p>Tekst 2b:</p>
+							<ul>
+								<li>P.S. Krøyer: <em>Sommeraften på Skagen Sønderstrand</em>, 1893, Skagens Museum, https://skagenskunstmuseer.dk/vaerker/sommeraften-skagen-soenderstrand/</li>
+								<li>P.C. Skovgaard: <em>Udsigt over havet fra Møns Klin</em>t, 1850, Skovgaard Museet, https://www.skovgaardmuseet.dk/media/1694/det-romantiske-landskab.pdf</li>
+								<li>C.W. Eckersberg: <em>Landskab med stente, Møn</em>, 1810, Statens Museum for Kunst, https://open.smk.dk/artwork/image/KMS7694</li>
+								<li>Anna Ancher: <em>Høstarbejdere</em>, 1905, Skagens Museum, https://skagenskunstmuseer.dk/blog/2020/09/21/landskab/ </li>
+							</ul>
+							<p>Tekst 3: Jakob Engel-Schmidt: <em>Du kan slå et folk ihjel bare ved at dræbe dets åndsliv</em>, Berlingske, 10. maj 2023</p>
+							<p><br></p>
+							<p>Ortografi og tegnsætning følger originalerne. Trykfejl er dog rettet.</p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8472">
+							<p><span style="color: #169179;" data-mce-style="color: #169179;"><strong>Du skal besvare enten denne opgave eller opgave 1 eller 2.</strong></span><br><br></p>
+							<h2>Opgave 3</h2>
+							<p>Skriv en debatterende artikel om <strong>kulturens betydning for befolkningen i et land</strong>.</p>
+							<p>Du skal inddrage Jakob Engel-Schmidts kronik <a pbyg-data-href-id="22467" href="assets/Tekst_3_21944-22467.pdf" target="_blank" rel="noopener" data-mce-href="https://xn--prvebyggeren-wjb.dk/webdav/ej5R2Oew8UZVeRjL_OJGjQ/document/Tekst_3_21944.pdf"><em>Du kan slå et folk ihjel bare ved at dræbe dets åndsliv</em></a> <span style="display: inline-block;">(tekst 3).</span></p>
+							<p>I din artikel skal du blandt andet besvare følgende: </p>
+							<ul>
+								<li>Hvad er din holdning til sprogs, litteraturs og anden kulturs betydning for et folk? Begrund din holdning.</li>
+								<li>Hvad er Jakob Engel-Schmidts hovedsynspunkt?</li><li>Hvad mener du om hans synspunkter og argumenter?</li>
+								<li>Hvilke andre synspunkter har du mødt?</li>
+								<li>Hvilke erfaringer med emnet har du selv?</li>
+							</ul>
+							<p>I din artikel skal du bruge centrale citater fra teksten.</p>
+							<p>Du skal skrive en fokuseret og spændende indledning, hvor du præsenterer problemstillingen i din artikel, og en afslutning, der sammenfatter dine pointer.</p>
+							<p>Du skal selv finde på en passende og fængende overskrift til din artikel.</p>
+							<p>Du skal skrive minimum 1000 ord.</p>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8471">
+							<p><strong><span style="color: #169179;" data-mce-style="color: #169179;">Du skal besvare enten denne opgave eller opgave 1 eller 3.</span></strong><br><br></p>
+							<h2>Opgave 2</h2>
+							<p>Skriv en analyserende artikel om, <strong>hvordan behovet for grøn omstilling kan fremstilles</strong>.</p>
+							<p>Som en del af artiklen skal du analysere reklamefilmen <a pbyg-data-href-id="22465" href="assets/Tekst_2a_21944-22465.pdf" target="_blank" rel="noopener" data-mce-href="https://xn--prvebyggeren-wjb.dk/webdav/muVInMpxucMOxwSFUUmRrw/document/Tekst_2a_21944.pdf"><em>Det er på tide at ændre billedet af dansk idyl</em></a> <span style="display: inline-block;">(tekst 2a).</span></p>
+							<p>Din artikel skal blandt andet besvare følgende:</p>
+							<ul>
+								<li>Hvad er filmens hensigt?</li>
+								<li>Hvordan fremstiller filmen ”dansk idyl”?</li>
+								<li>Hvilke virkemidler anvender filmen for at nå sit mål?</li>
+								<li>Vurderer du, at filmen er vellykket? Begrund dit svar.</li>
+							</ul>
+							<p>Du kan inddrage nogle af <a pbyg-data-href-id="22466" href="assets/Tekst_2b_21944-22466.pdf" target="_blank" rel="noopener" data-mce-href="https://xn--prvebyggeren-wjb.dk/webdav/yGi3QS13R-VAYpqsC7Uj6w/document/Tekst_2b_21944.pdf">billederne</a> <span style="display: inline-block;">(tekst 2b)</span> i din besvarelse.</p>
+							<p>I din artikel skal du præsentere og forklare centrale steder i filmen.</p>
+							<p>Du skal skrive en fokuseret og spændende indledning, hvor du præsenterer emnet for din artikel, og en afslutning, der sammenfatter dine pointer.</p>
+							<p>Du skal selv finde på en passende og fængende overskrift til din artikel.</p>
+							<p>Du skal skrive minimum 1000 ord.</p>
+							<div class="new-player mceNonEditable" contenteditable="false">
+								<div class="new-player-video" style="width: 600px; height: 300px;" data-mce-style="width: 600px; height: 300px;">
+									<video width="600" height="300" src="assets/21944_tekst_2a-21053.mp4" pbyg-data-src-id="21053" data-mce-src="https://xn--prvebyggeren-wjb.dk/webdav/yLywRDC-0UxM2iKgkT1Rww/document/21944_tekst_2a.mp4"></video>
+								</div>
+								<div class="subtitles new-player-subtitles" style="width: 600px;" data-mce-style="width: 600px;"><br></div>
+								<div class="new-player-footer" style="width: 600px;" data-mce-style="width: 600px;">
+									<div class="new-player-title">Tekst 2a</div>
+								</div>
+							</div>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8470">
+							<p><span style="color: #169179;" data-mce-style="color: #169179;"><strong>Du skal besvare enten denne opgave eller opgave 2 eller 3.</strong></span><br><br></p>
+							<h2>Opgave 1</h2>
+							<p>Skriv en analyserende artikel om, <strong>hvordan det er at flytte til et nyt land</strong>.</p>
+							<p>Som en del af artiklen skal du analysere og fortolke Robert Olen Butlers novelle <a pbyg-data-href-id="22464" href="assets/Tekst_1_21944-22464.pdf" target="_blank" rel="noopener" data-mce-href="https://xn--prvebyggeren-wjb.dk/webdav/XveI-qwxLhrDwz9ox_OYsQ/document/Tekst_1_21944.pdf"><em>Fårekyllinger</em></a> (tekst 1).</p>
+							<p>Din artikel skal blandt andet besvare følgende:</p>
+							<ul>
+								<li>Hvordan ser fortælleren sig selv i det nye land?</li>
+								<li>Hvordan er relationen mellem fortælleren og hans søn?</li>
+								<li>Hvordan er novellen fortalt?</li>
+								<li>Hvilken symbolsk betydning kan fårekyllingerne have for fortælleren?</li>
+							</ul>
+							<p>I din artikel skal du bruge centrale citater fra teksten.</p>
+							<p>Du skal skrive en fokuseret og spændende indledning, hvor du præsenterer emnet for din artikel, og en afslutning, der sammenfatter dine pointer.</p>
+							<p>Du skal selv finde på en passende og fængende overskrift til din artikel.</p>
+							<p>Du skal skrive minimum 1000 ord.</p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8469">
+							<h2>Henvisningspraksis</h2>
+							<p>I dansk som andetsprog A gælder som i andre fag, at alle kilder skal dokumenteres. Du skal derfor præsentere det materiale, du anvender i din artikel, og henvise til det enten i fodnoter eller direkte i teksten.</p>
+							<p>Du skal ikke vedlægge anvendt materiale i bilag eller udarbejde en litteraturliste.</p>
+							<p>Når du henviser, kan du med fordel anvende den praksis, som er beskrevet herunder, men det kan også være, at du har lært det på en lidt anden måde på din skole. Det vigtigste er, at den henvisningspraksis, du vælger, bruges konsekvent hele vejen gennem din tekst.</p>
+							<p><br></p>
+							<p><strong>Forslag til, hvordan du henviser til tekster:</strong></p>
+							<p>Når du første gang nævner en tekst eller andet materiale, og når du citerer fra materialet, skal du oplyse følgende i en fodnote:</p>
+							<ul>
+								<li>Afsender</li>
+								<li>Titel</li>
+								<li>Udgiver (fx et forlag, en avis eller et andet medie)</li>
+								<li>Årstal samt dato ved artikler</li>
+								<li>Link (hvis der er tale om internetmateriale)</li>
+								<li>Side- og evt. linjetal (ved citater)</li>
+								<li>Minut- og sekundtal (ved henvisninger til steder i film og lignende)</li>
+							</ul>
+							<p>Hvis du mangler nogen af disse oplysninger om opgaveteksterne, kan du finde dem under <em>Oplysninger til Copydan</em> til sidst i opgavematerialet.</p>
+							<p><br></p>
+							<p><strong>Eksempel på henvisning til en <em>litterær tekst</em>:</strong></p>
+							<p>Hovedpersonen i novellen er beskrevet som ”forfængelig og ikke til at holde ud.”<sup style="line-height: 0.4em;">1 </sup></p>
+							<p> </p>
+							<p><strong>Eksempel på henvisning til en <em>artikel</em>:</strong></p>
+							<p>Medieforsker ved Københavns Universitet Henrik Søndergaard mener, at DR’s underholdningsprogrammer af denne grund er vigtige for at fastholde seerne, hvilket han udtrykker i artiklen <em>Borgerlige vil sætte DR på slankekur</em> fra Berlingske den 1. januar 2014: ”Hvis man fjerner det underholdende, så vil man se, at DR samlet set får færre seere.”<sup style="line-height: 0.4em;">2</sup> </p>
+							<p><br></p>
+							<p><br></p>
+							<hr style="width: 35%; text-align: left; margin-left: 0;" data-mce-style="width: 35%; text-align: left; margin-left: 0;">
+							<div class="footer-footnotes">
+								<p><sup style="line-height: 0.4em;">1 </sup>Stig Dalager: <em>Det der gror</em>, Gyldendal, 2010, s. 2<br><sup style="line-height: 0.4em;">2 </sup>Henrik Dannemand Jensen og Kristian Lindberg: <em>Borgerlige vil sætte DR på slankekur</em>, Berlingske, 1. januar 2014, s. 3</p>
+							</div>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document" id="web-document-8468">
+							<h2>Prøvegenrer</h2>
+							<h3>Artiklen som genre</h3>
+							<p>De to opgavegenrer, du kan vælge at skrive, ligger inden for den overordnede skrivegenre: artikel. En artikel er en faktatekst, som ville kunne offentliggøres og læses af en interesseret læser.</p>
+							<p>Du er afsenderen. Den modtager, du skal have i tankerne, når du skriver, er en medborger, der interesserer sig for kultur og litteratur. Din modtager er bredt orienteret i danske medier, bøger, film og aktuelle debatter samt i den danske litteraturhistorie. Din modtager kender derfor også danskfaglige begreber som eksempelvis fortællesynsvinkel, flashforward og metafor. Det betyder, at du ikke behøver at definere disse begreber, når du bruger dem.</p>
+							<p>En artikel er opbygget med en indledning, en midte og en afslutning. Indledningen er fokuseret og åbner for centrale aspekter af emnet og din vinkel. Din artikel skal være skrevet i en sammenhængende form (dvs. ikke i punktform). Den skal have en fokuseret overskrift og kan eventuelt gøre brug af underoverskrifter.</p>
+							<p>I din artikel bruger du viden og tekster. Du skal præsentere de tekster, du inddrager, for din læser, hvilket vil sige, at du i din tekst skal nævne skribent, titel og gerne årstal, når du nævner teksten første gang. Det betyder til prøven, at også de tekster, som hører til opgaverne, skal præsenteres for din modtager. Du kan ikke forvente, at din læser kender dette materiale.</p>
+							<p>Du skal samtidig altid henvise til det materiale, du inddrager i din artikel. Du kan henvise på flere måder, men brug samme måde gennem hele artiklen. Du kan bruge fodnoter, henvise i parentes i din tekst eller som du ellers har lært det. Det vigtigste er, at du er konsekvent gennem hele artiklen og henviser på den samme måde.</p>
+							<p><br></p>
+							<h3>Den analyserende artikel</h3>
+							<p>I en analyserende artikel skal du analysere og fortolke en tekst.</p>
+							<p>Som led i din artikel skal du:</p>
+							<ul>
+								<li>præsentere din artikels overordnede emne</li>
+								<li>indføre læserne i en tekst, som de ikke kender</li>
+								<li>analysere væsentlige aspekter af teksten med brug af nærlæsning, velvalgte citater og relevante fagbegreber</li>
+								<li>knytte analysen til en fortolkning af teksten, hvor du forklarer, hvordan enkeltdele i teksten og teksten som helhed skal forstås – også det der gemmer sig mellem linjerne</li>
+								<li>perspektivere teksten til din artikels overordnede emne</li>
+							</ul>
+							<p><br></p>
+							<h3>Den debatterende artikel</h3>
+							<p>I en debatterende artikel skal du argumentere for dine holdninger til et emne og forsøge at overbevise dine læsere om, at du har ret.</p>
+							<p>Som led i din debatterende artikel skal du:</p>
+							<ul>
+								<li>præsentere din artikels overordnede emne</li>
+								<li>præsentere læserne for hovedsynspunktet i en tekst, som de ikke kender</li>
+								<li>tage stilling til tekstens hovedsynspunkt og dens argumentation</li>
+								<li>diskutere og debattere forskellige holdninger til emnet</li>
+							</ul>
+							<p>Den debatterende artikel omhandler altid et danskfagligt emne. Du er derfor meget velkommen til at inddrage begreber og tekster fra undervisningen.</p>
+							<p><br></p>
+							<h3>Faktaboks: Forskellen på diskussion og debat</h3>
+							<table border="1" height="89" cellpadding="7" style="border-collapse: collapse; width: 100%; height: 89px;" data-mce-style="border-collapse: collapse; width: 100%; height: 89px;">
+								<tbody>
+									<tr>
+										<td style="width: 99.4186%;" data-mce-style="width: 99.4186%;">
+											<p><strong>Diskussion:</strong></p>
+											<p>Formålet med diskussionen er at gøre din læser klogere på opgavens problemstilling ved at undersøge forskellige synspunkter på emnet. I en diskussion skal du vise synspunkter for (pro, dvs. ’på den ene side’) og imod (contra, dvs. ’på den anden side’). Det kan både være de synspunkter, som står i tekstmaterialet, det kan være dine egne synspunkter, eller det kan være mere generelle synspunkter, som du formulerer ud fra din viden om emnet.</p>
+											<p><strong>Debat:</strong></p>
+											<p>Formålet med en debat er at overbevise din modtager om, at du har ret. Diskussion og debat hænger ofte tæt sammen, fordi diskussionen er med til at vise forskellige synspunkter på emnet. Når du debatterer, er det vigtigt, at du fremfører de stærkeste argumenter og anvender en solid og saglig argumentation for at overbevise læseren. I en debat vil der ofte blive anvendt forskellige argumentationsformer og sproglige virkemidler, som er med til at understøtte argumentationen og overbevise modtageren.</p>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+							<p><br></p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+						<div class="web-document frontpage-web-document web-document-active" id="web-document-6746">
+                            <div class="frontpage-fields">
+                                <h1 class="frontpage-proeve-title" contenteditable="false">Dansk som andetsprog A</h1>
+                                <p class="frontpage-proeve-proeveordning" contenteditable="false"></p>
+                                <p class="frontpage-dato-for-afholdelse" contenteditable="false">Onsdag den 14. august 2024</p>
+                                <p class="frontpage-proeve-start-slut-tidspunkt" contenteditable="false"></p>
+							</div>
+							<p class="optional-textfield-3">Kl. 9.00-14.00</p>
+							<p><br></p>
+							<p><br></p>
+						</div>
+					</div>
+                </div>
+            </div>
         </div>
-    </div>
+  </div>
+        <script>
+            (function resetWordCounters() {
+                var wordCounters = document.getElementsByClassName('word-counter')
+                Array.prototype.forEach.call(wordCounters, function(wordCounter) {
+                    wordCounter.innerHTML = 0;
+                });
+            })();
 
-    <!-- Rest deines JS für Interaktionen -->
-    <script>
-        (function resetWordCounters() {
-            var wordCounters = document.getElementsByClassName('word-counter')
-            Array.prototype.forEach.call(wordCounters, function(wordCounter) {
-                wordCounter.innerHTML = 0;
-            });
-        })();
-
-        function countWords(obj) {
-            let res = [];
-            let str = obj.value.replace(/[\t\n\r\.\?\!]/gm, ' ').split(' ');
-            str.map((s) => {
-                let trimStr = s.trim();
-                if (trimStr.length > 0)
-                {
-                  res.push(trimStr);
-                }
-            });
-            obj.closest('.wordcount-textarea').getElementsByClassName('word-counter')[0].innerHTML = res.length;
-        }
-    </script>
-    <script>
+            function countWords(obj) {
+                let res = [];
+                let str = obj.value.replace(/[\t\n\r\.\?\!]/gm, ' ').split(' ');
+                str.map((s) => {
+                    let trimStr = s.trim();
+                    if (trimStr.length > 0)
+                    {
+                      res.push(trimStr);
+                    }
+                });
+                obj.closest('.wordcount-textarea').getElementsByClassName('word-counter')[0].innerHTML = res.length;
+            }
+        </script>
+        <script>
         function changeDocument(element) {
             document.querySelectorAll(".web-document").forEach(element => {
                 if(element.classList.contains("web-document-active")) {
@@ -226,6 +412,6 @@
 
         VideoPlayer.InitPlayers('.web-document-active .new-player');
         VideoPlayer.PauseAll();
-    </script>
-</body>
+        </script>
+	</body>
 </html>
